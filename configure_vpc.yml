@@ -20,7 +20,7 @@
       device={{ inventory_hostname }}
       username=admin
       password=cisco123
-      fact=vpc_id
+      key=vpc_id
       vpcID=20
     register: vpcdomain
 

@@ -81,7 +81,7 @@ def main():
 		username=dict(required=True),
 		password=dict(required=True),
 		device=dict(required=True),
-		fact=dict(required=True),
+		key=dict(required=True),
 		vpcID=dict(required=True),
 	),
 	supports_check_mode=False
@@ -90,23 +90,23 @@ def main():
 	username = module.params['username']
 	password = module.params['password']
 	ip_addr = module.params['device']
-	fact = module.params['fact']
+	key = module.params['key']
 	vpcID = module.params['vpcID']
 	switch = Device(ip=ip_addr, username=username, password=password)
 	switch.open()
 
-	facts={}
+	keys={}
 	intf = show_intf_mgmt(switch)
-	facts['mgmt_intf'] = intf
+	keys['mgmt_intf'] = intf
 
 	vpc = show_vpc(switch)
-	facts.update(vpc)
+	keys.update(vpc)
 
 	commands = []
 
 
-	if facts[fact] == vpcID:
-		msg = 'vPC ID ' + facts[fact] + ' already exists'
+	if keys[key] == vpcID:
+		msg = 'vPC ID ' + keys[key] + ' already exists'
 	else:
 		switch.conf('configure ; vpc domain ' + vpcID)
 		msg = 'vPC ' + vpcID + ' has been created'
