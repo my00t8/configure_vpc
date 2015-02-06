@@ -8,7 +8,7 @@ import sys
 import xmltodict
 
 
-def featureList(dev0):
+def vpcBrief(dev0):
     xmlData = dev0.show('show feature')
     jsonResult = xmltodict.parse(xmlData[1])
 

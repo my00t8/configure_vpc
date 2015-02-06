@@ -1,7 +1,7 @@
 ---
 
 - name: Configure vPC on leaf switches.
-  hosts: leafs
+  hosts: vpc101
   connection: local
   gather_facts: no
 
