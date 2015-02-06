@@ -9,24 +9,21 @@ import xmltodict
 
 
 def vpcBrief(dev0):
-    xmlData = dev0.show('show feature')
+    xmlData = dev0.show('show vpc brief')
     jsonResult = xmltodict.parse(xmlData[1])
 
-    lacp = True
-    vpc = True
+    peerLnk = True
+    keepAlv = True
 
-    dictFeatures = jsonResult['ins_api']['outputs']['output']['body']['TABLE_cfcFeatureCtrlTable']['ROW_cfcFeatureCtrlTable']
+    dictDomain = jsonResult['ins_api']['outputs']['output']['body']
 
-    for each in dictFeatures:
-        for k, v in each.iteritems():
-            if k == 'cfcFeatureCtrlName2' and v == 'lacp':
-            	if each['cfcFeatureCtrlOpStatus2'] == 'disabled':
-            	    lacp = False
-            if k == 'cfcFeatureCtrlName2' and v == 'vpc':
-            	if each['cfcFeatureCtrlOpStatus2'] == 'disabled':
-            	    vpc = False
+    domnId = dictDomain['vpc-domain-id']
+    if dictDomain['vpc-peer-status'] == 'peer-link-down':
+        peerLnk = False
+    if dictDomain['vpc-peer-keepalive-status'] == 'peer-not-alive':
+        keepAlv = False
 
-    return { 'lacp':lacp, 'vpc':vpc }
+    return { 'Domain':domnId, 'Link':peerLnk, 'KA':keepAlv }
 
 
 def main():
@@ -43,20 +40,17 @@ def main():
     dev0 = device.Device(ip=module.params['device'], username=module.params['username'], password=module.params['password'])
     dev0.open()
 
-    msg0 = 'LACP already configured. vPC already configured.'
+    msg0 = 'vPC Peer Link and Keep Alive Link both active.'
     msg1 = ''
-    msg2 = ''
 
-    getFeatures = featureList(dev0)
-    if getFeatures['lacp'] == False:
-        dev0.conf('configure ; feature lacp')
-        msg1 = 'LACP configured.'
-    if getFeatures['vpc'] == False:
-        dev0.conf('configure ; feature vpc')
-        msg2 = 'vPC configred.'
+    getStatus = vpcBrief(dev0)
+    if getStatus['Link'] == False or getStatus['KA'] == False:
+        dev0.conf('configure ; no vpc domain ' + getStatus['Domain'])
+        msg1 = 'vPC domain compromised. Delete and begin again.'
+        # vPC domain is now removed from switch. Need something here to redirect to previous step of creating vPC domain.
 
-    if len(msg1) > 1 or len(msg2) > 1:
-        msg0 =  msg1 + ' ' + msg2
+    if len(msg1) > 1:
+        msg0 = msg1
 
     module.exit_json(status=msg0)
 
