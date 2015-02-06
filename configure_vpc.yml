@@ -1,0 +1,17 @@
+---
+
+- name: Configure vPC on leaf switches.
+  hosts: leafs
+  connection: local
+  gather_facts: no
+
+  tasks:
+
+  - name: Check feature enablement for required features.
+    checkFeatures:
+      device={{ inventory_hostname }}
+      username=admin
+      password=cisco123
+    register: features
+
+  - debug: msg="{{ features.status }}"

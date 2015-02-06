@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+
+
+import device
+import json
+import nxapi
+import sys
+import xmltodict
+
+
+def featureList(dev0):
+    xmlData = dev0.show('show feature')
+    jsonResult = xmltodict.parse(xmlData[1])
+
+    lacp = True
+    vpc = True
+
+    dictFeatures = jsonResult['ins_api']['outputs']['output']['body']['TABLE_cfcFeatureCtrlTable']['ROW_cfcFeatureCtrlTable']
+
+    for each in dictFeatures:
+        for k, v in each.iteritems():
+            if k == 'cfcFeatureCtrlName2' and v == 'lacp':
+            	if each['cfcFeatureCtrlOpStatus2'] == 'disabled':
+            	    lacp = False
+            if k == 'cfcFeatureCtrlName2' and v == 'vpc':
+            	if each['cfcFeatureCtrlOpStatus2'] == 'disabled':
+            	    vpc = False
+
+    return { 'lacp':lacp, 'vpc':vpc }
+
+
+def main():
+    
+    module = AnsibleModule(
+        argument_spec = dict(
+            device = dict(required=True),
+            username = dict(required=True),
+            password = dict(required=True)
+        ),
+        supports_check_mode = False
+    )
+
+    dev0 = device.Device(ip=module.params['device'], username=module.params['username'], password=module.params['password'])
+    dev0.open()
+
+    msg0 = 'LACP already configured. vPC already configured.'
+    msg1 = ''
+    msg2 = ''
+
+    getFeatures = featureList(dev0)
+    if getFeatures['lacp'] == False:
+        dev0.conf('configure ; feature lacp')
+        msg1 = 'LACP configured.'
+    if getFeatures['vpc'] == False:
+        dev0.conf('configure ; feature vpc')
+        msg2 = 'vPC configred.'
+
+    if len(msg1) > 1 or len(msg2) > 1:
+        msg0 =  msg1 + ' ' + msg2
+
+    module.exit_json(status=msg0)
+
+
+from ansible.module_utils.basic import *
+
+main()
