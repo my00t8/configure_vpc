@@ -1,0 +1,84 @@
+#!/usr/bin/env python
+
+import xmltodict
+import json
+import sys
+from device import Device
+
+def show_intf_mgmt(sw):
+	getdata = sw.show('show interface mgmt0')
+
+	show_intf_dict = xmltodict.parse(getdata[1])
+
+	data = show_intf_dict['ins_api']['outputs']['output']['body']['TABLE_interface']['ROW_interface']
+
+	ip = data['eth_ip_addr']
+	mask = data['eth_ip_mask']
+	name = data['interface']
+	speed = data['eth_speed']
+	duplex = data['eth_duplex']
+
+	mgmt_dict = {'eth_ip_addr': ip+'/'+mask, 'name':name, 'speed': speed, 'duplex': duplex}
+
+	return mgmt_dict
+
+
+def show_cdp(sw):
+	getdata = sw.show('show cdp neighbors')
+
+	show_cdp_dict = xmltodict.parse(getdata[1])
+	data = show_cdp_dict['ins_api']['outputs']['output']['body']
+
+	cdp_dict = {}
+#	cdp_dict['cdp_id'] = data['device_id']
+	cdp_dict['interface_id'] = data['intf_id']
+	cdp_dict['port_id'] = data['port_id']
+	
+
+	return cdp_dict
+
+
+
+
+def main():
+
+	module=AnsibleModule(
+	argument_spec=dict(
+		username=dict(required=True),
+		password=dict(required=True),
+		device=dict(required=True),
+		fact=dict(required=True),
+	),
+	supports_check_mode=False
+)
+
+	username = module.params['username']
+	password = module.params['password']
+	ip_addr = module.params['device']
+	fact = module.params['fact']
+	switch = Device(ip=ip_addr, username=username, password=password)
+	switch.open()
+
+	facts={}
+	intf = show_intf_mgmt(switch)
+	facts['mgmt_intf'] = intf
+
+	cdp = show_cdp(switch)
+	facts.update(cdp)
+
+	if fact == 'all':
+		msg = facts
+		#print json.dumps(facts, indent=4)
+	else:
+		if fact in facts.keys():
+			msg = facts[fact]
+			#print args[1].upper() + ': ' + json.dumps(facts[args[1]], indent=4)
+		else:
+			msg = 'Invalid Key. Try again.'
+			#print 'Invalid key. Try again.'
+
+	module.exit_json(status=msg)
+
+
+from ansible.module_utils.basic import *
+main()

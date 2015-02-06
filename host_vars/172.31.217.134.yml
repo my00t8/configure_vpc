@@ -1,0 +1,4 @@
+---
+
+hostname: test-HOSTNAME
+mgmt_ip: 172.31.217.134/24

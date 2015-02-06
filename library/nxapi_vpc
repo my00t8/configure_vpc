@@ -1,0 +1,120 @@
+#!/usr/bin/env python
+
+import xmltodict
+import json
+import sys
+from device import Device
+
+def show_intf_mgmt(sw):
+	getdata = sw.show('show interface mgmt0')
+
+	show_intf_dict = xmltodict.parse(getdata[1])
+
+	data = show_intf_dict['ins_api']['outputs']['output']['body']['TABLE_interface']['ROW_interface']
+
+	ip = data['eth_ip_addr']
+	mask = data['eth_ip_mask']
+	name = data['interface']
+	speed = data['eth_speed']
+	duplex = data['eth_duplex']
+
+	mgmt_dict = {'eth_ip_addr': ip+'/'+mask, 'name':name, 'speed': speed, 'duplex': duplex}
+
+	return mgmt_dict
+
+
+def show_vpc(sw):
+	getdata = sw.show('show vpc brief')
+
+	show_vpc_dict = xmltodict.parse(getdata[1])
+	data = show_vpc_dict['ins_api']['outputs']['output']['body']
+
+	vpc_dict = {}
+	vpc_dict['vpc_id'] = data['vpc-domain-id']
+	vpc_dict['status'] = data['vpc-peer-status']
+	vpc_dict['status_reason'] = data['vpc-peer-status-reason']
+	vpc_dict['keepalive_status'] = data['vpc-peer-keepalive-status']
+	vpc_dict['peer_consistency'] = data['vpc-peer-consistency']
+	vpc_dict['peer_consistency_status'] = data['vpc-peer-consistency-status']
+	vpc_dict['t2_consistency'] = data['vpc-type-2-consistency']
+	vpc_dict['t2_consistency_status'] = data['vpc-type-2-consistency-status']
+	vpc_dict['role'] = data['vpc-role']
+	vpc_dict['num_vpc'] = data['num-of-vpcs']
+	vpc_dict['gateway'] = data['peer-gateway']
+	vpc_dict['exclueded_vlans'] = data['dual-active-excluded-vlans']
+	vpc_dict['consistency_check_status'] = data['vpc-graceful-consistency-check-status']
+	vpc_dict['recovery_status'] = data['vpc-auto-recovery-status']
+
+
+	return vpc_dict
+
+
+def create_vpc(sw):
+	createvpc = sw.config('vpc domain')
+
+	show_vpc_dict = xmltodict.parse(getdata[1])
+	data = show_vpc_dict['ins_api']['outputs']['output']['body']
+
+	vpc_dict = {}
+	vpc_dict['vpc_id'] = data['vpc-domain-id']
+	vpc_dict['status'] = data['vpc-peer-status']
+	vpc_dict['status_reason'] = data['vpc-peer-status-reason']
+	vpc_dict['keepalive_status'] = data['vpc-peer-keepalive-status']
+	vpc_dict['peer_consistency'] = data['vpc-peer-consistency']
+	vpc_dict['peer_consistency_status'] = data['vpc-peer-consistency-status']
+	vpc_dict['t2_consistency'] = data['vpc-type-2-consistency']
+	vpc_dict['t2_consistency_status'] = data['vpc-type-2-consistency-status']
+	vpc_dict['role'] = data['vpc-role']
+	vpc_dict['num_vpc'] = data['num-of-vpcs']
+	vpc_dict['gateway'] = data['peer-gateway']
+	vpc_dict['exclueded_vlans'] = data['dual-active-excluded-vlans']
+	vpc_dict['consistency_check_status'] = data['vpc-graceful-consistency-check-status']
+	vpc_dict['recovery_status'] = data['vpc-auto-recovery-status']
+
+
+	return vpc_dict
+
+def main():
+
+	module=AnsibleModule(
+	argument_spec=dict(
+		username=dict(required=True),
+		password=dict(required=True),
+		device=dict(required=True),
+		fact=dict(required=True),
+		vpcID=dict(required=True),
+	),
+	supports_check_mode=False
+)
+
+	username = module.params['username']
+	password = module.params['password']
+	ip_addr = module.params['device']
+	fact = module.params['fact']
+	vpcID = module.params['vpcID']
+	switch = Device(ip=ip_addr, username=username, password=password)
+	switch.open()
+
+	facts={}
+	intf = show_intf_mgmt(switch)
+	facts['mgmt_intf'] = intf
+
+	vpc = show_vpc(switch)
+	facts.update(vpc)
+
+	commands = []
+
+
+	if facts[fact] == vpcID:
+		msg = 'vPC ID ' + facts[fact] + ' already exists'
+	else:
+		switch.conf('configure ; vpc domain ' + vpcID)
+		msg = 'vPC ' + vpcID + ' has been created'
+
+
+	module.exit_json(status=msg)
+
+
+
+from ansible.module_utils.basic import *
+main()
