@@ -14,4 +14,16 @@
       password=cisco123
     register: features
 
+
+  - name: Build vPC domain on peer switches.
+    nxapi_vpc:
+      device={{ inventory_hostname }}
+      username=admin
+      password=cisco123
+      fact=vpc_id
+      vpcID=20
+    register: vpcdomain
+
   - debug: msg="{{ features.status }}"
+
+  - debug: msg="{{ vpcdomain.status }}"
